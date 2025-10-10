@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>MESS-IA</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family:Consolas,monospace;
+    background:radial-gradient(circle at 50% 40%, #0b1624 0%, #000 70%);
+    color:#bfe8ff;
+    overflow:hidden;
+  }
+
+  /* BOOT */
+  #boot{
+    position:fixed;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;background:#020305;
+  }
+  #boot h1{letter-spacing:.22em;text-shadow:0 0 10px #38bdf8;color:#d6f2ff;margin:0}
+  #boot pre{margin-top:14px;color:#38bdf8;text-shadow:0 0 8px #38bdf8;font-size:14px;white-space:pre-wrap}
+
+  /* DESKTOP */
+  #desktop{display:none;position:fixed;inset:0;background:linear-gradient(160deg,#05070b,#0a1422)}
+  .topbar{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:10px 14px;border-bottom:1px solid #1b2a3f;background:rgba(0,0,0,.35);backdrop-filter:blur(4px)
+  }
+  .dot{width:8px;height:8px;border-radius:999px;background:#38bdf8;box-shadow:0 0 14px #38bdf8}
+  .title{letter-spacing:.25em;font-weight:800;color:#e6f6ff}
+
+  .grid{display:grid;gap:16px;padding:16px}
+  @media(min-width:980px){.grid{grid-template-columns:2fr 1fr}}
+
+  /* SCANNER */
+  .scanner{
+    position:relative;height:360px;border:1px solid #1b2a3f;border-radius:12px;
+    background:rgba(0,10,20,.5);box-shadow:inset 0 0 25px rgba(56,189,248,.25), 0 0 20px rgba(56,189,248,.15)
+  }
+  .scanner .head{display:flex;justify-content:space-between;padding:8px 12px;color:#a8dfff}
+  .viewport{position:absolute;inset:44px 12px 12px 12px;border:1px solid #234361;border-radius:8px;overflow:hidden;background:#000;display:flex;align-items:center;justify-content:center;color:#8bd7ff90}
+  .viewport img{width:100%;height:100%;object-fit:contain;filter:brightness(.9) contrast(1.15)}
+  .scanline{position:absolute;left:12px;right:12px;top:44px;height:10px;background:linear-gradient(to bottom,transparent,rgba(56,189,248,.6));animation:scan 2.2s linear infinite;border-radius:4px}
+  @keyframes scan{0%{transform:translateY(0)}100%{transform:translateY(calc(100% - 54px))}}
+
+  /* TERMINAL */
+  .terminal{display:flex;flex-direction:column;height:220px;border:1px solid #1b2a3f;border-radius:12px;background:rgba(0,0,0,.55);box-shadow:inset 0 0 20px rgba(56,189,248,.18)}
+  .term-out{flex:1;overflow:auto;padding:10px;font-size:13px;color:#d6f2ff}
+  .term-in{display:flex;gap:8px;border-top:1px solid #1b2a3f;padding:8px}
+  .prompt{color:#38bdf8}
+  .term-in input{flex:1;background:transparent;border:none;outline:none;color:#e9fbff}
+
+  /* FILES */
+  .files{border:1px solid #1b2a3f;border-radius:12px;background:rgba(255,255,255,.03);padding:12px}
+  .file-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  @media(min-width:520px){.file-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+  .file{border:1px solid #25405d;background:rgba(0,0,0,.45);border-radius:10px;padding:12px;text-align:center;cursor:pointer;color:#ccecff;transition:transform .08s ease, box-shadow .2s}
+  .file:hover{transform:translateY(-2px);box-shadow:0 0 14px rgba(56,189,248,.25)}
+  .icon{font-size:28px;display:block;margin-bottom:6px;color:#7fd8ff}
+
+  /* MODAL */
+  .overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(2,8,20,.86);backdrop-filter:blur(4px);animation:fadeIn .35s ease forwards;z-index:1000}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  .holo{
+    width:720px;max-width:92vw;border:1px solid #38bdf8;border-radius:14px;
+    background:linear-gradient(180deg,rgba(0,12,24,.7),rgba(0,0,0,.7));
+    box-shadow:0 0 26px #38bdf8, inset 0 0 70px rgba(56,189,248,.35);
+    color:#eaf8ff;padding:16px;display:grid;grid-template-columns:200px 1fr;gap:16px;animation:pulse 3s ease-in-out infinite
+  }
+  @keyframes pulse{0%,100%{box-shadow:0 0 20px #38bdf8, inset 0 0 60px rgba(56,189,248,.3)}50%{box-shadow:0 0 40px #00ffff, inset 0 0 90px rgba(56,189,248,.5)}}
+  .holo img{width:100%;height:240px;object-fit:cover;border-radius:10px;border:1px solid rgba(56,189,248,.7);background:#0a1422}
+  .title{letter-spacing:.2em;font-weight:800;margin:4px 0}
+  .badge{display:inline-block;padding:2px 8px;border:1px solid rgba(56,189,248,.6);border-radius:999px;background:rgba(255,255,255,.05);color:#eaf8ff;font-size:12px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}
+  .desc{font-size:13px;color:#d4f2ff}
+  .hint{font-size:12px;color:#9bd7ff}
+  .close{justify-self:end;border:1px solid rgba(56,189,248,.6);border-radius:8px;background:transparent;color:#c9efff;padding:6px 10px;cursor:pointer}
+</style>
+</head>
+<body>
+  <!-- BOOT -->
+  <div id="boot">
+    <h1>MESS-IA SYSTEM BOOT</h1>
+    <pre id="bootLog"></pre>
+  </div>
+
+  <!-- DESKTOP -->
+  <div id="desktop">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="dot"></span>
+        <span class="title">MESS-IA // CYBER DESKTOP</span>
+      </div>
+      <div style="color:#9bd7ff">Astuce: tape <b>help</b> dans le terminal</div>
+    </div>
+
+    <div class="grid">
+      <div style="display:grid;gap:16px">
+        <!-- Scanner -->
+        <div class="scanner" id="scanner">
+          <div class="head">
+            <span>Facial HUD</span>
+            <span style="color:#9bd7ff">STATUS: ONLINE</span>
+          </div>
+          <div class="viewport" id="viewport">Glisse une image ici ou clique</div>
+          <div class="scanline"></div>
+          <input type="file" accept="image/*" id="fileIn" style="display:none" />
+        </div>
+
+        <!-- Terminal -->
+        <div messiaclass="terminal">
+          <div class="term-out" id="termOut">&gt; help — liste des commandes<br/></div>
+          <div class="term-in">
+            <span class="prompt">$</span>
+            <input id="termIn" placeholder="help | open tsukino | open jenny_johnson | open ivy_smith | open project_" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Dossiers -->
+      <div class="files">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="color:#9bd7ff">Dossiers</div>
+          <div style="color:#9bd7ff">Cliquer ouvre le dossier</div>
+        </div>
+        <div class="file-grid">
+          <div class="file" data-open="tsukino"><span class="icon">📁</span>TSUKINO</div>
+          <div class="file" data-open="jenny_johnson"><span class="icon">📁</span>JENNY JOHNSON</div>
+          <div class="file" data-open="ivy_smith"><span class="icon">📁</span>IVY SMITH</div>
+          <div class="file" data-open="project_messia"><span class="icon">📁</span>PROJECT messia</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* ===== BOOT ===== */
+(function(){
+  const lines=[
+    "Loading neural shards... OK",
+    "Decrypting memory vaults... OK",
+    "HUD systems... READY",
+    "Holo-bus sync... OK",
+    "Entering secure desktop..."
+  ];
+  const boot=document.getElementById("boot");
+  const log=document.getElementById("bootLog");
+  const desk=document.getElementById("desktop");
+  let i=0;
+  const int=setInterval(()=>{
+    log.textContent += (i? "\n":"") + lines[i];
+    i++;
+    if(i>=lines.length){
+      clearInterval(int);
+      setTimeout(()=>{ boot.style.display="none"; desk.style.display="block"; }, 1000);
+    }
+  },800);
+})();
+
+/* ===== SCANNER ===== */
+(function(){
+  const scanner=document.getElementById("scanner");
+  const viewport=document.getElementById("viewport");
+  const fileIn=document.getElementById("fileIn");
+
+  function loadFile(f){
+    const url=URL.createObjectURL(f);
+    viewport.innerHTML="";
+    const img=new Image();
+    img.onload=()=>viewport.appendChild(img);
+    img.onerror=()=>{
+      viewport.textContent="Image invalide";
+    };
+    img.src=url;
+    logTerm(["Scanning… 97%","No anomalies found."]);
+  }
+
+  scanner.addEventListener("click",()=>fileIn.click());
+  scanner.addEventListener("dragover",e=>{e.preventDefault(); scanner.style.borderColor="#54d8ff";});
+  scanner.addEventListener("dragleave",e=>{e.preventDefault(); scanner.style.borderColor="#1b2a3f";});
+  scanner.addEventListener("drop",e=>{
+    e.preventDefault();
+    scanner.style.borderColor="#1b2a3f";
+    const f=e.dataTransfer.files && e.dataTransfer.files[0];
+    if(f) loadFile(f);
+  });
+  fileIn.addEventListener("change",e=>{
+    const f=e.target.files && e.target.files[0];
+    if(f) loadFile(f);
+  });
+})();
+
+/* ===== TERMINAL ===== */
+const termOut=document.getElementById("termOut");
+const termIn=document.getElementById("termIn");
+
+function logTerm(lines){
+  for(const l of lines){ termOut.innerHTML += l + "<br/>"; }
+  termOut.scrollTop=termOut.scrollHeight;
+}
+function echo(cmd){ termOut.innerHTML += "&gt; " + cmd + "<br/>"; }
+
+termIn.addEventListener("keydown",e=>{
+  if(e.key==="Enter"){
+    const v=termIn.value.trim();
+    if(!v) return;
+    echo(v);
+    handleCommand(v.toLowerCase());
+    termIn.value="";
+  }
+});
+
+function handleCommand(cmd){
+  if(cmd==="help"){
+    logTerm([
+      "Commands:",
+      "  help",
+      "  open tsukino",
+      "  open jenny_johnson",
+      "  open ivy_smith",
+      "  open project_messia",
+      "  clear"
+    ]);
+  }else if(cmd==="clear"){
+    termOut.innerHTML="";
+  }else if(cmd.startsWith("open ")){
+    openDossier(cmd.replace("open ","").trim());
+  }else{
+    logTerm(["Unknown command. Type 'help'."]);
+  }
+}
+
+/* ===== DOSSIERS ===== */
+const dossiers={
+  tsukino:{
+    title:"TSUKINO — Archive Echo",
+    accent:"#38bdf8",
+    img:"tsukino.png",
+    role:"Sujet de rémanence numérique",
+    status:"Signal persistant — reconstitution en cours",
+    tags:["ECHO","SIMULATION","CONFIDENTIAL"],
+    description:"Fragment de présence simulée identifié. Données d'origine altérées — recomposition chronologique en cours. L'illusion vise à restituer traits, voix et habitudes à partir de traces partielles.",
+    hint:"Note: ce n’est pas une résurrection, mais une interface de mémoire simulée."
+  },
+  jenny_johnson:{
+    title:"JENNY JOHNSON — Dossier Opérationnel",
+    accent:"#8a7dff",
+    img:"jenny.png",
+    role:"LSPD / enquêtes internes",
+    status:"Surveillance active — déplacements irréguliers",
+    tags:["OPS","SECURITY","PRIORITY"],
+    description:"Profil analytique avancé. Assignée aux audits de systèmes. Peut interférer avec MESS-IA si anomalies détectées.",
+    hint:"Trace thermique élevée aux accès Sud — corrélée aux scans nocturnes."
+  },
+  ivy_smith:{
+    title:"IVY SMITH — Dossier Opérationnel",
+    accent:"#ff7bd1",
+    img:"ivy.png",
+    role:"LSPD / renseignement terrain",
+    status:"Observation recommandée — réseaux étendus",
+    tags:["FIELD","INTEL","MONITOR"],
+    description:"Liaison multi-cellules. Silence radio prolongé. Peut recouper des éléments de MESS-IA en cas de motif anormal.",
+    hint:"Hypothèse: accès aux logs d’anciennes maintenances de MESS-IA."
+  },
+  project_messia:{
+    title:"PROJECT MESS-IA — Présentation",
+    accent:"#35ef8d",
+    img:"messia.png",
+    role:"Programme d’infrastructure mentale",
+    status:"Déploiement discret — modules partiels actifs",
+    tags:["CORE","SYSTEM","NEON"],
+    description:"MESS-IA agrège mémoire subjective, reconstruction narrative et interface sensorielle. Objectif public: adoucir le chaos urbain via illusions utiles et contrôlées.",
+    hint:"Paramètres visuels: saturation ++, bloom ++, persistance moyenne."
+  }
+};
+
+function openDossier(key){
+  const d=dossiers[key];
+  if(!d){ logTerm([`Dossier introuvable: ${key}`]); return; }
+
+  const overlay=document.createElement("div");
+  overlay.className="overlay";
+
+  const holo=document.createElement("div");
+  holo.className="holo";
+  holo.style.borderColor=d.accent;
+  holo.style.boxShadow=`0 0 26px ${d.accent}, inset 0 0 70px ${hexWithAlpha(d.accent,0.35)}`;
+
+  // Colonne image
+  const imgCol=document.createElement("img");
+  imgCol.alt=key;
+  imgCol.src=d.img;
+  imgCol.onerror=()=>{ imgCol.remove(); const ph=document.createElement("div"); ph.style.cssText="width:100%;height:240px;display:flex;align-items:center;justify-content:center;border-radius:10px;border:1px solid rgba(56,189,248,.6);background:#0a1422;color:#cfeeff;font-size:12px"; ph.textContent="IMAGE MANQUANTE"; holo.prepend(ph); };
+
+  // Colonne contenu
+  const content=document.createElement("div");
+  const head=document.createElement("div"); head.style.cssText="display:flex;justify-content:space-between;align-items:center;gap:8px";
+  const title=document.createElement("div"); title.className="title"; title.textContent=d.title; title.style.color="#e9fbff";
+  const close=document.createElement("button"); close.className="close"; close.textContent="FERMER ✕";
+
+  head.appendChild(title); head.appendChild(close);
+
+  const row1=document.createElement("div"); row1.className="row";
+  row1.appendChild(badge(d.role,d.accent));
+  row1.appendChild(badge(d.status,d.accent));
+
+  const row2=document.createElement("div"); row2.className="row";
+  d.tags.forEach(t=>row2.appendChild(badge(t,d.accent)));
+
+  const desc=document.createElement("p"); desc.className="desc"; desc.textContent=d.description;
+  const hint=document.createElement("div"); hint.className="hint"; hint.textContent=d.hint;
+
+  content.appendChild(head);
+  content.appendChild(row1);
+  content.appendChild(row2);
+  content.appendChild(desc);
+  content.appendChild(hint);
+
+  holo.appendChild(imgCol);
+  holo.appendChild(content);
+  overlay.appendChild(holo);
+  document.body.appendChild(overlay);
+
+  function closeOverlay(){
+    overlay.style.transition="opacity .4s"; overlay.style.opacity="0";
+    setTimeout(()=>overlay.remove(),400);
+  }
+  overlay.addEventListener("click",e=>{ if(e.target===overlay) closeOverlay(); });
+  close.addEventListener("click",closeOverlay);
+}
+
+function badge(text,accent){
+  const b=document.createElement("span");
+  b.className="badge";
+  b.style.borderColor=accent;
+  b.textContent=text;
+  return b;
+}
+function hexWithAlpha(hex,a){
+  // hex "#RRGGBB" => rgba
+  const c=hex.replace("#",""); if(c.length!==6) return `rgba(56,189,248,${a})`;
+  const r=parseInt(c.slice(0,2),16), g=parseInt(c.slice(2,4),16), b=parseInt(c.slice(4,6),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+/* Icônes cliquables */
+document.querySelectorAll(".file").forEach(el=>{
+  el.addEventListener("click",()=>openDossier(el.getAttribute("data-open")));
+});
+</script>
+</body>
+</html>
