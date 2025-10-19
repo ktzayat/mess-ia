@@ -3,27 +3,72 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>MESS-IA</title>
+<title>MESS-IA — Interface Bleue + Alerte Centrale</title>
 <style>
-  *{box-sizing:border-box}
+  *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
   body{
-    margin:0;
     font-family:Consolas,monospace;
     background:radial-gradient(circle at 50% 40%, #0b1624 0%, #000 70%);
     color:#bfe8ff;
     overflow:hidden;
   }
 
-  /* BOOT */
+  /* ========= BOOT ========= */
   #boot{
     position:fixed;inset:0;display:flex;flex-direction:column;
-    align-items:center;justify-content:center;background:#020305;
+    align-items:center;justify-content:center;background:#020305;z-index:5
   }
   #boot h1{letter-spacing:.22em;text-shadow:0 0 10px #38bdf8;color:#d6f2ff;margin:0}
   #boot pre{margin-top:14px;color:#38bdf8;text-shadow:0 0 8px #38bdf8;font-size:14px;white-space:pre-wrap}
 
-  /* DESKTOP */
+  /* ========= ALERTE CENTRALE ========= */
+  #alertOverlay{
+    position:fixed;inset:0;display:none;z-index:10;
+    background:rgba(0,0,0,.82);backdrop-filter:blur(5px);
+    align-items:center;justify-content:center;animation:fadeIn .35s ease forwards;
+  }
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  @keyframes alertPulse{
+    0%,100%{box-shadow:0 0 26px rgba(31,182,255,.45), inset 0 0 70px rgba(255,45,85,.22)}
+    50%{box-shadow:0 0 56px rgba(255,45,85,.55), inset 0 0 100px rgba(31,182,255,.30)}
+  }
+  @keyframes screenShake {
+    0%,100% { transform: translate(0,0); }
+    10% { transform: translate(-2px, 1px); }
+    20% { transform: translate(2px, -1px); }
+    30% { transform: translate(-1px, -2px); }
+    40% { transform: translate(1px, 2px); }
+    50% { transform: translate(-2px, 0px); }
+    60% { transform: translate(2px, 1px); }
+    70% { transform: translate(-1px, -1px); }
+    80% { transform: translate(1px, 0px); }
+    90% { transform: translate(0px, 1px); }
+  }
+  .shake{animation:screenShake .9s infinite}
+
+  .alert-card{
+    width:min(760px,92vw);
+    background:radial-gradient(120% 140% at 50% 0%, rgba(31,182,255,.18), rgba(0,0,0,.92) 55%);
+    border:2px solid #1fb6ff;border-radius:14px;
+    box-shadow:0 0 38px rgba(31,182,255,.55), inset 0 0 90px rgba(255,45,85,.22);
+    padding:18px 18px 14px; color:#eaf7ff; text-align:left;
+    animation:alertPulse 2.6s ease-in-out infinite;
+  }
+  .alert-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px}
+  .alert-title{font-weight:900;letter-spacing:.14em;color:#9ad8ff;text-shadow:0 0 10px #1fb6ff, 0 0 10px #ff4477}
+  .alert-chip{font-size:11px;border:1px solid #ff4477;border-radius:999px;padding:3px 9px;background:rgba(255,68,119,.08);color:#ffd3df}
+  .alert-body{white-space:pre-wrap;line-height:1.45;color:#dff3ff;font-size:13.5px;margin-top:6px}
+  .alert-cta{display:flex;justify-content:flex-end;margin-top:12px;gap:8px}
+  .btn{
+    padding:9px 14px;border-radius:8px;border:1px solid #1fb6ff;
+    background:linear-gradient(180deg,#0b1f2e,#08141f);color:#dff3ff;cursor:pointer;transition:.18s
+  }
+  .btn:hover{box-shadow:0 0 14px rgba(31,182,255,.35)}
+  #soundHint{display:none;margin-top:8px;font-size:12px;color:#ffb3c2}
+  #enableSound{margin-left:8px;padding:5px 10px;border-radius:6px;border:1px solid #1fb6ff;background:linear-gradient(180deg,#0b1f2e,#08141f);color:#dff3ff;cursor:pointer}
+
+  /* ========= DESKTOP (interface bleue) ========= */
   #desktop{display:none;position:fixed;inset:0;background:linear-gradient(160deg,#05070b,#0a1422)}
   .topbar{
     display:flex;justify-content:space-between;align-items:center;
@@ -35,7 +80,7 @@
   .grid{display:grid;gap:16px;padding:16px}
   @media(min-width:980px){.grid{grid-template-columns:2fr 1fr}}
 
-  /* SCANNER */
+  /* Scanner */
   .scanner{
     position:relative;height:360px;border:1px solid #1b2a3f;border-radius:12px;
     background:rgba(0,10,20,.5);box-shadow:inset 0 0 25px rgba(56,189,248,.25), 0 0 20px rgba(56,189,248,.15)
@@ -46,14 +91,14 @@
   .scanline{position:absolute;left:12px;right:12px;top:44px;height:10px;background:linear-gradient(to bottom,transparent,rgba(56,189,248,.6));animation:scan 2.2s linear infinite;border-radius:4px}
   @keyframes scan{0%{transform:translateY(0)}100%{transform:translateY(calc(100% - 54px))}}
 
-  /* TERMINAL */
+  /* Terminal */
   .terminal{display:flex;flex-direction:column;height:220px;border:1px solid #1b2a3f;border-radius:12px;background:rgba(0,0,0,.55);box-shadow:inset 0 0 20px rgba(56,189,248,.18)}
   .term-out{flex:1;overflow:auto;padding:10px;font-size:13px;color:#d6f2ff}
   .term-in{display:flex;gap:8px;border-top:1px solid #1b2a3f;padding:8px}
   .prompt{color:#38bdf8}
   .term-in input{flex:1;background:transparent;border:none;outline:none;color:#e9fbff}
 
-  /* FILES */
+  /* Files */
   .files{border:1px solid #1b2a3f;border-radius:12px;background:rgba(255,255,255,.03);padding:12px}
   .file-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
   @media(min-width:520px){.file-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
@@ -61,18 +106,16 @@
   .file:hover{transform:translateY(-2px);box-shadow:0 0 14px rgba(56,189,248,.25)}
   .icon{font-size:28px;display:block;margin-bottom:6px;color:#7fd8ff}
 
-  /* MODAL */
+  /* Modal Dossier */
   .overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(2,8,20,.86);backdrop-filter:blur(4px);animation:fadeIn .35s ease forwards;z-index:1000}
-  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
   .holo{
     width:720px;max-width:92vw;border:1px solid #38bdf8;border-radius:14px;
     background:linear-gradient(180deg,rgba(0,12,24,.7),rgba(0,0,0,.7));
     box-shadow:0 0 26px #38bdf8, inset 0 0 70px rgba(56,189,248,.35);
-    color:#eaf8ff;padding:16px;display:grid;grid-template-columns:200px 1fr;gap:16px;animation:pulse 3s ease-in-out infinite
+    color:#eaf8ff;padding:16px;display:grid;grid-template-columns:200px 1fr;gap:16px
   }
-  @keyframes pulse{0%,100%{box-shadow:0 0 20px #38bdf8, inset 0 0 60px rgba(56,189,248,.3)}50%{box-shadow:0 0 40px #00ffff, inset 0 0 90px rgba(56,189,248,.5)}}
   .holo img{width:100%;height:240px;object-fit:cover;border-radius:10px;border:1px solid rgba(56,189,248,.7);background:#0a1422}
-  .title{letter-spacing:.2em;font-weight:800;margin:4px 0}
+  .modal-title{letter-spacing:.2em;font-weight:800;margin:4px 0}
   .badge{display:inline-block;padding:2px 8px;border:1px solid rgba(56,189,248,.6);border-radius:999px;background:rgba(255,255,255,.05);color:#eaf8ff;font-size:12px}
   .row{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}
   .desc{font-size:13px;color:#d4f2ff}
@@ -81,62 +124,84 @@
 </style>
 </head>
 <body>
-  <!-- BOOT -->
-  <div id="boot">
-    <h1>MESS-IA SYSTEM BOOT</h1>
-    <pre id="bootLog"></pre>
+
+<!-- ===== BOOT ===== -->
+<div id="boot">
+  <h1>MESS-IA SYSTEM BOOT</h1>
+  <pre id="bootLog"></pre>
+</div>
+
+<!-- ===== ALERTE CENTRALE ===== -->
+<div id="alertOverlay" aria-modal="true" role="dialog">
+  <div class="alert-card">
+    <div class="alert-head">
+      <div class="alert-title">⚠ ALERTE SYSTÈME MESS-IA</div>
+      <span class="alert-chip">UPDATE RÉCENT</span>
+    </div>
+    <div id="alertBody" class="alert-body"></div>
+    <div id="soundHint">🔊 Le navigateur a bloqué l’autoplay.<button id="enableSound">Activer le son</button></div>
+    <div class="alert-cta"><button id="alertClose" class="btn">FERMER</button></div>
+  </div>
+</div>
+<audio id="alertSound" src="alert.mp3" preload="auto" loop></audio>
+
+<!-- ===== DESKTOP (interface BLEUE) ===== -->
+<div id="desktop" aria-hidden="true">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="dot"></span>
+      <span class="title">MESS-IA // CYBER DESKTOP</span>
+    </div>
+    <div style="color:#9bd7ff">Astuce: tape <b>help</b> dans le terminal</div>
   </div>
 
-  <!-- DESKTOP -->
-  <div id="desktop">
-    <div class="topbar">
-      <div style="display:flex;align-items:center;gap:10px">
-        <span class="dot"></span>
-        <span class="title">MESS-IA // CYBER DESKTOP</span>
+  <div class="grid">
+    <div style="display:grid;gap:16px">
+      <!-- Scanner -->
+      <div class="scanner" id="scanner">
+        <div class="head">
+          <span>Facial HUD</span>
+          <span style="color:#9bd7ff">STATUS: ONLINE</span>
+        </div>
+        <div class="viewport" id="viewport">Glisse une image ici ou clique</div>
+        <div class="scanline"></div>
+        <input type="file" accept="image/*" id="fileIn" style="display:none" />
       </div>
-      <div style="color:#9bd7ff">Astuce: tape <b>help</b> dans le terminal</div>
+
+      <!-- Terminal -->
+      <div class="terminal">
+        <div class="term-out" id="termOut">&gt; help — liste des commandes<br/></div>
+        <div class="term-in">
+          <span class="prompt">$</span>
+          <input id="termIn" placeholder="help | open tsukino | open jenny_johnson | open ivy_smith | open projet_mess_ia | open traitre | open ousmane" />
+        </div>
+      </div>
     </div>
 
-    <div class="grid">
-      <div style="display:grid;gap:16px">
-        <!-- Scanner -->
-        <div class="scanner" id="scanner">
-          <div class="head">
-            <span>Facial HUD</span>
-            <span style="color:#9bd7ff">STATUS: ONLINE</span>
-          </div>
-          <div class="viewport" id="viewport">Glisse une image ici ou clique</div>
-          <div class="scanline"></div>
-          <input type="file" accept="image/*" id="fileIn" style="display:none" />
-        </div>
-
-        <!-- Terminal -->
-        <div messiaclass="terminal">
-          <div class="term-out" id="termOut">&gt; help — liste des commandes<br/></div>
-          <div class="term-in">
-            <span class="prompt">$</span>
-            <input id="termIn" placeholder="help | open tsukino | open jenny_johnson | open ivy_smith | open project_" />
-          </div>
-        </div>
+    <!-- Dossiers -->
+    <div class="files">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="color:#9bd7ff">Dossiers</div>
+        <div style="color:#9bd7ff">Cliquer ouvre le dossier</div>
       </div>
-
-      <!-- Dossiers -->
-      <div class="files">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-          <div style="color:#9bd7ff">Dossiers</div>
-          <div style="color:#9bd7ff">Cliquer ouvre le dossier</div>
-        </div>
-        <div class="file-grid">
-          <div class="file" data-open="tsukino"><span class="icon">📁</span>TSUKINO</div>
-          <div class="file" data-open="jenny_johnson"><span class="icon">📁</span>JENNY JOHNSON</div>
-          <div class="file" data-open="ivy_smith"><span class="icon">📁</span>IVY SMITH</div>
-          <div class="file" data-open="project_messia"><span class="icon">📁</span>PROJECT messia</div>
-        </div>
+      <div class="file-grid">
+        <div class="file" data-open="tsukino"><span class="icon">📁</span>TSUKINO</div>
+        <div class="file" data-open="jenny_johnson"><span class="icon">📁</span>JENNY JOHNSON</div>
+        <div class="file" data-open="ivy_smith"><span class="icon">📁</span>IVY SMITH</div>
+        <div class="file" data-open="projet_mess_ia"><span class="icon">📁</span>PROJET MESS-IA</div>
+        <div class="file" data-open="traitre"><span class="icon">📁</span>LE TRAÎTRE</div>
+        <div class="file" data-open="ousmane"><span class="icon">📁</span>OUSMANE</div>
       </div>
     </div>
   </div>
+</div>
 
 <script>
+/* ===== UTIL ===== */
+function byId(id){return document.getElementById(id);}
+function badge(text,accent){const b=document.createElement("span");b.className="badge";b.style.borderColor=accent;b.textContent=text;return b;}
+function normalizeKey(k){return (k||"").toLowerCase().replace(/\s+/g,"_").replace(/-/g,"_").replace(/mess-?ia/,"mess_ia").replace(/projet/,"projet");}
+
 /* ===== BOOT ===== */
 (function(){
   const lines=[
@@ -146,34 +211,226 @@
     "Holo-bus sync... OK",
     "Entering secure desktop..."
   ];
-  const boot=document.getElementById("boot");
-  const log=document.getElementById("bootLog");
-  const desk=document.getElementById("desktop");
+  const boot=byId("boot");
+  const log=byId("bootLog");
+  const desk=byId("desktop");
   let i=0;
   const int=setInterval(()=>{
     log.textContent += (i? "\n":"") + lines[i];
     i++;
     if(i>=lines.length){
       clearInterval(int);
-      setTimeout(()=>{ boot.style.display="none"; desk.style.display="block"; }, 1000);
+      setTimeout(()=>{ boot.style.display="none"; desk.style.display="block"; desk.setAttribute("aria-hidden","true"); showAlert(); }, 700);
     }
-  },800);
+  },700);
+  // filet de sécu si un truc bloque
+  setTimeout(()=>{ if(desk.style.display!=="block"){ boot.style.display="none"; desk.style.display="block"; showAlert(); } }, 8000);
 })();
+
+/* ===== ALERTE (centrale + son + tremblement) ===== */
+const ALERT_TEXT = [
+  "🔻 MESSAGE D’ALERTE SYSTÈME MESS-IA 🔻",
+  "",
+  "Intrusion détectée.",
+  "Les entités TSUKINO et IVY SMITH ont été libérées sans autorisation du protocole de confinement.",
+  "Source : interférence interne — agent inconnu identifié comme TRAÎTRE.",
+  "Surveillance renforcée en cours sur l’ensemble du réseau urbain.",
+  "",
+  "⚠️ L’accès aux fichiers est temporairement restreint jusqu’à fermeture de cette alerte.",
+  "",
+  "Chava Levy : le système attend vos ordres."
+].join("\n");
+
+function showAlert(){
+  const overlay=byId("alertOverlay");
+  const body=byId("alertBody");
+  const snd=byId("alertSound");
+  body.textContent=ALERT_TEXT;
+  overlay.style.display="flex";
+  document.body.classList.add("shake");
+
+  // tente lecture immédiate
+  const playAttempt=snd.play();
+  if(playAttempt && typeof playAttempt.then==="function"){
+    playAttempt.then(()=>{/* ok */}).catch(()=>{
+      // autoplay bloqué
+      byId("soundHint").style.display="block";
+    });
+  }
+}
+
+byId("enableSound").addEventListener("click",()=>{
+  const snd=byId("alertSound");
+  snd.play().then(()=>{ byId("soundHint").style.display="none"; }).catch(()=>{});
+});
+
+byId("alertClose").addEventListener("click",()=>{
+  const overlay=byId("alertOverlay");
+  const desk=byId("desktop");
+  const snd=byId("alertSound");
+  overlay.style.opacity="1"; overlay.style.transition="opacity .25s";
+  requestAnimationFrame(()=>{ overlay.style.opacity="0"; });
+  setTimeout(()=>{ overlay.style.display="none"; desk.setAttribute("aria-hidden","false"); document.body.classList.remove("shake"); }, 240);
+  snd.pause(); snd.currentTime=0;
+});
+
+/* ===== TERMINAL ===== */
+const termOut=byId("termOut");
+const termIn=byId("termIn");
+function logTerm(lines){ for(const l of lines){ termOut.innerHTML += l + "<br/>"; } termOut.scrollTop=termOut.scrollHeight; }
+function echo(cmd){ termOut.innerHTML += "&gt; " + cmd + "<br/>"; termOut.scrollTop=termOut.scrollHeight; }
+
+termIn.addEventListener("keydown",e=>{
+  if(e.key==="Enter"){
+    const v=termIn.value.trim(); if(!v) return;
+    echo(v); handleCommand(v); termIn.value="";
+  }
+});
+function handleCommand(raw){
+  const cmd=raw.trim().toLowerCase();
+  if(cmd==="help"){
+    logTerm([
+      "Commands:",
+      "  help",
+      "  clear",
+      "  open tsukino",
+      "  open jenny_johnson",
+      "  open ivy_smith",
+      "  open projet_mess_ia",
+      "  open traitre",
+      "  open ousmane"
+    ]);
+    return;
+  }
+  if(cmd==="clear"){ termOut.innerHTML=""; return; }
+  if(cmd.startsWith("open ")){
+    const key=normalizeKey(cmd.slice(5));
+    openDossier(alias[key] || key); return;
+  }
+  logTerm(["Unknown command. Type 'help'."]);
+}
+
+/* ===== DOSSIERS ===== */
+const dossiers={
+  tsukino:{
+    title:"TSUKINO — Archive Echo",
+    accent:"#38bdf8",
+    img:"tsukino.png",
+    role:"Rémanence numérique détectée",
+    status:"Observation continue — réseau urbain",
+    tags:["ECHO","SIMULATION","ACTIVE"],
+    description:"L’entité TSUKINO est observée par le réseau MESS-IA. Signaux visuels sporadiques multi-zones, parfois synchronisés avec IVY.",
+    hint:"Flux mémoire instable — fragments de voix détectés."
+  },
+  jenny_johnson:{
+    title:"JENNY JOHNSON — Dossier Opérationnel",
+    accent:"#8a7dff",
+    img:"jenny.png",
+    role:"Agent de sécurité / Enquêtes internes",
+    status:"Observation active — coordonnées multiples",
+    tags:["OPS","SURVEILLANCE","RISK"],
+    description:"Présence repérée sur de multiples flux. Les caméras de la zone Ouest suivent des déplacements irréguliers. Lien possible avec l’activité du noyau MESS-IA.",
+    hint:"Détections récurrentes : pont Nord."
+  },
+  ivy_smith:{
+    title:"IVY SMITH — Dossier Opérationnel",
+    accent:"#ff7bd1",
+    img:"ivy.png",
+    role:"Agent terrain — infiltration",
+    status:"Signal brouillé — sous analyse",
+    tags:["FIELD","GHOST","MONITOR"],
+    description:"Disparitions temporaires du réseau puis réapparitions partielles. 63 % des enregistrements vidéo sont corrompus.",
+    hint:"Hypothèse : assistance interne."
+  },
+  projet_mess_ia:{
+    title:"PROJET MESS-IA — Présentation",
+    accent:"#35ef8d",
+    img:"messia.png",
+    role:"Programme central de perception augmentée",
+    status:"Actif — collecte continue",
+    tags:["CORE","SYSTEM","AI"],
+    description:"MESS-IA connecte caméras et capteurs pour reconstituer la mémoire urbaine et générer des illusions protectrices.",
+    hint:"Conscience globale instable — supervision requise."
+  },
+  traitre:{
+    title:"LE TRAÎTRE — Identité inconnue",
+    accent:"#ff5a7a",
+    img:"traitre.png",
+    role:"Ancien opérateur du projet",
+    status:"Recherche en cours — infiltration confirmée",
+    tags:["INFILTRATION","RISK","ALERT"],
+    description:"Levée non autorisée des verrous d’IVY et TSUKINO. Réécriture de fragments de protocole et effacement des journaux vidéo.",
+    hint:"Dernier ping : Secteur Delta — mobile."
+  },
+  ousmane:{
+    title:"OUSMANE — Sujet expérimental MESS-IA",
+    accent:"#ff7f9d",
+    img:"ousmane.png",
+    role:"Sujet post-synchronisation — conscience fragmentée",
+    status:"Instable — connecté aux caméras urbaines",
+    tags:["EXPERIMENTAL","AI-LINK","MONITOR"],
+    description:"Après défaillance d’implant, identité diffusée dans le réseau : apparitions multiples simultanées. MESS-IA tente d’unifier les échos mentaux.",
+    hint:"Liaison persistante — interruption risquée."
+  }
+};
+const alias={
+  "project_mess_ia":"projet_mess_ia","project_messia":"projet_mess_ia","projet_messia":"projet_mess_ia",
+  "mess-ia":"projet_mess_ia","project_mess-ia":"projet_mess_ia","projet_mess-ia":"projet_mess_ia",
+  "project_mess ia":"projet_mess_ia","projet mess ia":"projet_mess_ia"
+};
+
+/* ===== MODALE DOSSIER ===== */
+function openDossier(key){
+  const d=dossiers[key];
+  if(!d){ logTerm([`Dossier introuvable : ${key}`]); return; }
+
+  const overlay=document.createElement("div"); overlay.className="overlay";
+  const holo=document.createElement("div"); holo.className="holo";
+  holo.style.borderColor=d.accent; holo.style.boxShadow=`0 0 26px ${d.accent}, inset 0 0 70px rgba(56,189,248,.35)`;
+
+  const img=document.createElement("img"); img.src=d.img; img.alt=key;
+  img.onerror=function(){
+    this.replaceWith(Object.assign(document.createElement("div"),{
+      style:"width:100%;height:240px;display:flex;align-items:center;justify-content:center;border-radius:10px;border:1px solid rgba(56,189,248,.6);background:#0a1422;color:#cfeeff;font-size:12px",
+      textContent:"IMAGE MANQUANTE"
+    }));
+  };
+
+  const content=document.createElement("div");
+  const head=document.createElement("div"); head.style.cssText="display:flex;justify-content:space-between;align-items:center;gap:8px";
+  const title=document.createElement("div"); title.className="modal-title"; title.textContent=d.title;
+  const close=document.createElement("button"); close.className="close"; close.textContent="FERMER ✕";
+  head.appendChild(title); head.appendChild(close);
+
+  const row1=document.createElement("div"); row1.className="row";
+  row1.appendChild(badge(d.role,d.accent)); row1.appendChild(badge(d.status,d.accent));
+
+  const row2=document.createElement("div"); row2.className="row";
+  (d.tags||[]).forEach(t=>row2.appendChild(badge(t,d.accent)));
+
+  const desc=document.createElement("p"); desc.className="desc"; desc.textContent=d.description;
+  const hint=document.createElement("div"); hint.className="hint"; hint.textContent=d.hint || "";
+
+  content.append(head,row1,row2,desc,hint);
+  holo.append(img,content); overlay.append(holo); document.body.append(overlay);
+
+  function closeOverlay(){ overlay.style.transition="opacity .4s"; overlay.style.opacity="0"; setTimeout(()=>overlay.remove(),350); }
+  overlay.addEventListener("click",e=>{ if(e.target===overlay) closeOverlay(); });
+  close.addEventListener("click",closeOverlay);
+}
 
 /* ===== SCANNER ===== */
 (function(){
-  const scanner=document.getElementById("scanner");
-  const viewport=document.getElementById("viewport");
-  const fileIn=document.getElementById("fileIn");
+  const scanner=byId("scanner");
+  const viewport=byId("viewport");
+  const fileIn=byId("fileIn");
 
   function loadFile(f){
     const url=URL.createObjectURL(f);
     viewport.innerHTML="";
     const img=new Image();
     img.onload=()=>viewport.appendChild(img);
-    img.onerror=()=>{
-      viewport.textContent="Image invalide";
-    };
+    img.onerror=()=>{ viewport.textContent="Image invalide"; };
     img.src=url;
     logTerm(["Scanning… 97%","No anomalies found."]);
   }
@@ -193,160 +450,7 @@
   });
 })();
 
-/* ===== TERMINAL ===== */
-const termOut=document.getElementById("termOut");
-const termIn=document.getElementById("termIn");
-
-function logTerm(lines){
-  for(const l of lines){ termOut.innerHTML += l + "<br/>"; }
-  termOut.scrollTop=termOut.scrollHeight;
-}
-function echo(cmd){ termOut.innerHTML += "&gt; " + cmd + "<br/>"; }
-
-termIn.addEventListener("keydown",e=>{
-  if(e.key==="Enter"){
-    const v=termIn.value.trim();
-    if(!v) return;
-    echo(v);
-    handleCommand(v.toLowerCase());
-    termIn.value="";
-  }
-});
-
-function handleCommand(cmd){
-  if(cmd==="help"){
-    logTerm([
-      "Commands:",
-      "  help",
-      "  open tsukino",
-      "  open jenny_johnson",
-      "  open ivy_smith",
-      "  open project_messia",
-      "  clear"
-    ]);
-  }else if(cmd==="clear"){
-    termOut.innerHTML="";
-  }else if(cmd.startsWith("open ")){
-    openDossier(cmd.replace("open ","").trim());
-  }else{
-    logTerm(["Unknown command. Type 'help'."]);
-  }
-}
-
-/* ===== DOSSIERS ===== */
-const dossiers={
-  tsukino:{
-    title:"TSUKINO — Archive Echo",
-    accent:"#38bdf8",
-    img:"tsukino.png",
-    role:"Sujet de rémanence numérique",
-    status:"Signal persistant — reconstitution en cours",
-    tags:["ECHO","SIMULATION","CONFIDENTIAL"],
-    description:"Fragment de présence simulée identifié. Données d'origine altérées — recomposition chronologique en cours. L'illusion vise à restituer traits, voix et habitudes à partir de traces partielles.",
-    hint:"Note: ce n’est pas une résurrection, mais une interface de mémoire simulée."
-  },
-  jenny_johnson:{
-    title:"JENNY JOHNSON — Dossier Opérationnel",
-    accent:"#8a7dff",
-    img:"jenny.png",
-    role:"LSPD / enquêtes internes",
-    status:"Surveillance active — déplacements irréguliers",
-    tags:["OPS","SECURITY","PRIORITY"],
-    description:"Profil analytique avancé. Assignée aux audits de systèmes. Peut interférer avec MESS-IA si anomalies détectées.",
-    hint:"Trace thermique élevée aux accès Sud — corrélée aux scans nocturnes."
-  },
-  ivy_smith:{
-    title:"IVY SMITH — Dossier Opérationnel",
-    accent:"#ff7bd1",
-    img:"ivy.png",
-    role:"LSPD / renseignement terrain",
-    status:"Observation recommandée — réseaux étendus",
-    tags:["FIELD","INTEL","MONITOR"],
-    description:"Liaison multi-cellules. Silence radio prolongé. Peut recouper des éléments de MESS-IA en cas de motif anormal.",
-    hint:"Hypothèse: accès aux logs d’anciennes maintenances de MESS-IA."
-  },
-  project_messia:{
-    title:"PROJECT MESS-IA — Présentation",
-    accent:"#35ef8d",
-    img:"messia.png",
-    role:"Programme d’infrastructure mentale",
-    status:"Déploiement discret — modules partiels actifs",
-    tags:["CORE","SYSTEM","NEON"],
-    description:"MESS-IA agrège mémoire subjective, reconstruction narrative et interface sensorielle. Objectif public: adoucir le chaos urbain via illusions utiles et contrôlées.",
-    hint:"Paramètres visuels: saturation ++, bloom ++, persistance moyenne."
-  }
-};
-
-function openDossier(key){
-  const d=dossiers[key];
-  if(!d){ logTerm([`Dossier introuvable: ${key}`]); return; }
-
-  const overlay=document.createElement("div");
-  overlay.className="overlay";
-
-  const holo=document.createElement("div");
-  holo.className="holo";
-  holo.style.borderColor=d.accent;
-  holo.style.boxShadow=`0 0 26px ${d.accent}, inset 0 0 70px ${hexWithAlpha(d.accent,0.35)}`;
-
-  // Colonne image
-  const imgCol=document.createElement("img");
-  imgCol.alt=key;
-  imgCol.src=d.img;
-  imgCol.onerror=()=>{ imgCol.remove(); const ph=document.createElement("div"); ph.style.cssText="width:100%;height:240px;display:flex;align-items:center;justify-content:center;border-radius:10px;border:1px solid rgba(56,189,248,.6);background:#0a1422;color:#cfeeff;font-size:12px"; ph.textContent="IMAGE MANQUANTE"; holo.prepend(ph); };
-
-  // Colonne contenu
-  const content=document.createElement("div");
-  const head=document.createElement("div"); head.style.cssText="display:flex;justify-content:space-between;align-items:center;gap:8px";
-  const title=document.createElement("div"); title.className="title"; title.textContent=d.title; title.style.color="#e9fbff";
-  const close=document.createElement("button"); close.className="close"; close.textContent="FERMER ✕";
-
-  head.appendChild(title); head.appendChild(close);
-
-  const row1=document.createElement("div"); row1.className="row";
-  row1.appendChild(badge(d.role,d.accent));
-  row1.appendChild(badge(d.status,d.accent));
-
-  const row2=document.createElement("div"); row2.className="row";
-  d.tags.forEach(t=>row2.appendChild(badge(t,d.accent)));
-
-  const desc=document.createElement("p"); desc.className="desc"; desc.textContent=d.description;
-  const hint=document.createElement("div"); hint.className="hint"; hint.textContent=d.hint;
-
-  content.appendChild(head);
-  content.appendChild(row1);
-  content.appendChild(row2);
-  content.appendChild(desc);
-  content.appendChild(hint);
-
-  holo.appendChild(imgCol);
-  holo.appendChild(content);
-  overlay.appendChild(holo);
-  document.body.appendChild(overlay);
-
-  function closeOverlay(){
-    overlay.style.transition="opacity .4s"; overlay.style.opacity="0";
-    setTimeout(()=>overlay.remove(),400);
-  }
-  overlay.addEventListener("click",e=>{ if(e.target===overlay) closeOverlay(); });
-  close.addEventListener("click",closeOverlay);
-}
-
-function badge(text,accent){
-  const b=document.createElement("span");
-  b.className="badge";
-  b.style.borderColor=accent;
-  b.textContent=text;
-  return b;
-}
-function hexWithAlpha(hex,a){
-  // hex "#RRGGBB" => rgba
-  const c=hex.replace("#",""); if(c.length!==6) return `rgba(56,189,248,${a})`;
-  const r=parseInt(c.slice(0,2),16), g=parseInt(c.slice(2,4),16), b=parseInt(c.slice(4,6),16);
-  return `rgba(${r},${g},${b},${a})`;
-}
-
-/* Icônes cliquables */
+/* ===== CLICS FICHIERS ===== */
 document.querySelectorAll(".file").forEach(el=>{
   el.addEventListener("click",()=>openDossier(el.getAttribute("data-open")));
 });
